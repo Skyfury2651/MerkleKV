@@ -690,13 +690,15 @@ mod tests {
         assert_eq!(result, "Hey! World! Hello!");
         assert_eq!(engine.get("greeting"), Some("Hey! World! Hello!".to_string()));
         
-        // Test append to non-existent key (should error)
-        let result = engine.append("nonexistent", "value");
-        assert!(result.is_err());
+        // Test append to non-existent key (should create the key)
+        let result = engine.append("nonexistent", "value").unwrap();
+        assert_eq!(result, "value");
+        assert_eq!(engine.get("nonexistent"), Some("value".to_string()));
         
-        // Test prepend to non-existent key (should error)
-        let result = engine.prepend("another_nonexistent", "value");
-        assert!(result.is_err());
+        // Test prepend to non-existent key (should create the key)
+        let result = engine.prepend("another_nonexistent", "prefix").unwrap();
+        assert_eq!(result, "prefix");
+        assert_eq!(engine.get("another_nonexistent"), Some("prefix".to_string()));
         
         // Set up a new key for testing
         engine.set("new_key".to_string(), "Start: ".to_string());

@@ -36,7 +36,7 @@ mod sync; // Anti-entropy synchronization (stub)
 mod change_event; // Change event schema & codecs
 
 // Import storage engines
-use crate::store::{KVEngineStoreTrait, KvEngine, RwLockEngine, SledEngine};
+use crate::store::{KVEngineStoreTrait, KvEngine, RwLockEngine};
 
 /// Main entry point for the MerkleKV server.
 ///
@@ -56,7 +56,7 @@ use crate::store::{KVEngineStoreTrait, KvEngine, RwLockEngine, SledEngine};
 ///
 /// # Command Line Arguments
 /// * `--config <path>` - Path to configuration file (default: config.toml)
-/// * `--engine <type>` - Storage engine type: "rwlock" or "kv" (overrides config file)
+/// * `--engine <type>` - Storage engine type: "memory", "rwlock", or "sled" (overrides config file)
 /// * `--storage-path <path>` - Storage path (overrides config file)
 fn main() -> Result<()> {
     // Initialize logging - use RUST_LOG environment variable to control verbosity
@@ -108,10 +108,19 @@ fn main() -> Result<()> {
 
     // Override with command line arguments if provided
     if let Some(engine) = engine_type {
-        config.engine = engine;
+        config.storage.engine = match engine.to_lowercase().as_str() {
+            "memory" | "kv" => config::StorageEngine::Memory,
+            "rwlock" => config::StorageEngine::RwLock,
+            "sled" => config::StorageEngine::Sled,
+            _ => {
+                eprintln!("Error: Unknown engine type '{}'", engine);
+                eprintln!("Available engines: memory, rwlock, sled");
+                std::process::exit(1);
+            }
+        };
     }
     if let Some(path) = storage_path {
-        config.storage_path = path;
+        config.storage.path = path;
     }
 
     // Create a multi-threaded async runtime for handling concurrent connections
@@ -122,25 +131,20 @@ fn main() -> Result<()> {
     // Start the server in the async runtime
     runtime.block_on(async {
         // Initialize the storage engine based on configuration
-        let store: Box<dyn KVEngineStoreTrait + Send + Sync> = match config.engine.as_str() {
-            "rwlock" => {
-                println!("Using thread-safe RwLockEngine");
-                Box::new(RwLockEngine::new(&config.storage_path)?)
-            }
-            "kv" => {
-                println!("⚠️  WARNING: Using non-thread-safe KvEngine!");
+        let store: Box<dyn KVEngineStoreTrait + Send + Sync> = match config.storage.engine {
+            config::StorageEngine::Memory => {
+                println!("⚠️  WARNING: Using non-thread-safe Memory engine!");
                 println!("   This engine is NOT safe for concurrent access.");
                 println!("   Only use this for single-threaded applications or testing.");
-                Box::new(KvEngine::new(&config.storage_path)?)
+                store::create_storage_engine(&config.storage)?
             }
-            "sled" => {
-                println!("Using persistent SledEngine");
-                Box::new(SledEngine::new(&config.storage_path)?)
+            config::StorageEngine::RwLock => {
+                println!("Using thread-safe RwLock engine");
+                store::create_storage_engine(&config.storage)?
             }
-            _ => {
-                eprintln!("Error: Unknown engine type '{}'", config.engine);
-                eprintln!("Available engines: rwlock, kv, sled");
-                std::process::exit(1);
+            config::StorageEngine::Sled => {
+                println!("Using persistent Sled engine at {}", config.storage.path);
+                store::create_storage_engine(&config.storage)?
             }
         };
 

@@ -1,12 +1,40 @@
+# MerkleKV Configuration File
+#
+# This file contains configuration settings for the MerkleKV server.
+# All settings can be overridden via command line arguments.
+
+# Network Configuration
 host = "127.0.0.1"
 port = 7379
-storage_path = "data"
-engine = "rwlock"
-sync_interval_seconds = 60
 
+# Storage Configuration
+[storage]
+# Storage engine type: "memory", "rwlock", or "sled"
+engine = "rwlock"
+# Path where data should be stored
+path = "data"
+# Enable compression for Sled engine
+compression = true
+# Cache size in MB for Sled engine
+cache_size_mb = 100
+# Flush interval in milliseconds for Sled engine
+flush_interval_ms = 1000
+# Maximum database size in MB for Sled engine
+max_db_size_mb = 1024
+
+# Replication Configuration
 [replication]
+# Whether replication is enabled for this node
 enabled = false
+# Hostname or IP of the MQTT broker
 mqtt_broker = "localhost"
+# Port number of the MQTT broker
 mqtt_port = 1883
+# Prefix for MQTT topics used by this cluster
 topic_prefix = "merkle_kv"
+# Unique identifier for this node in MQTT communications
 client_id = "node1"
+
+# Synchronization Configuration
+# How often (in seconds) to run anti-entropy synchronization with peers
+sync_interval_seconds = 60

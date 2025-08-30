@@ -89,22 +89,26 @@ pub trait KVEngineStoreTrait: Send + Sync {
     
     /// Append a value to an existing string.
     ///
+    /// If the key doesn't exist, it will be created with the value.
+    ///
     /// # Arguments
     /// * `key` - The key to append to
     /// * `value` - The value to append
     ///
     /// # Returns
-    /// * `Result<String>` - The new value after appending, or error if key doesn't exist
+    /// * `Result<String>` - The new value after appending
     fn append(&self, key: &str, value: &str) -> Result<String>;
     
     /// Prepend a value to an existing string.
+    ///
+    /// If the key doesn't exist, it will be created with the value.
     ///
     /// # Arguments
     /// * `key` - The key to prepend to
     /// * `value` - The value to prepend
     ///
     /// # Returns
-    /// * `Result<String>` - The new value after prepending, or error if key doesn't exist
+    /// * `Result<String>` - The new value after prepending
     fn prepend(&self, key: &str, value: &str) -> Result<String>;
     
     /// Clear all keys/values in the store.
